@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -88,4 +89,32 @@ public class FlightNotification {
 
     @Column(nullable = true)
     private String nvaDate;
+
+    // Missing Fields
+    @Column(nullable = true)
+    private String flightNumber;
+
+    @Column(nullable = true)
+    private LocalDateTime departureTime;
+
+    @Column(nullable = true)
+    private LocalDateTime arrivalTime;
+
+    @Column(nullable = true)
+    private LocalDateTime departureDate;
+
+    @Column(nullable = true)
+    private LocalDateTime arrivalDate;
+
+    // Payment details
+    private String fareCalculation;
+    private String paymentForm;
+    private String endorsements;
+    private BigDecimal baseFare;
+    private BigDecimal taxes;
+    private BigDecimal carrierFees;
+    private BigDecimal totalAmount;
+    private BigDecimal fee;
+    private BigDecimal totalOBFees;
+    private BigDecimal grandTotal;
 }

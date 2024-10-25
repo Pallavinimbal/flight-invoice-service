@@ -41,19 +41,22 @@ public class FlightNotificationService {
     }
 
     public void sendFlightNotificationEmail(FlightNotificationDto notificationDto, String toEmail) throws IOException, TemplateException, MessagingException {
+        log.info("Sending flight notification email with DTO: {}", notificationDto);
         byte[] pdfBytes = createFlightNotificationPdf(notificationDto);
 
         // email with the PDF attachment
         sendEmailWithAttachment(toEmail, "Your Flight Ticket", "Please find your flight ticket attached.", pdfBytes, "FlightTicket.pdf");
     }
 
-      private byte[] generatePdf(FlightNotificationDto notificationDto) throws IOException, TemplateException {
-          // Log the NVB Date
-          log.info("NVB Date: {}", notificationDto.getNvbDate());
-          // Load the PDF template
+    private byte[] generatePdf(FlightNotificationDto notificationDto) throws IOException, TemplateException {
+        // Log the NVB Date
+        log.info("NVB Date: {}", notificationDto.getNvbDate());
+
+        // Load the PDF template
         Template pdfTemplate = freemarkerConfig.getTemplate("pdf-template.ftl");
 
-          Map<String, Object> model = new HashMap<>();
+
+        Map<String, Object> model = new HashMap<>();
           model.put("passengerName", notificationDto.getPassengerName() != null ? notificationDto.getPassengerName() : "N/A");
           model.put("bookingReference", notificationDto.getBookingReference() != null ? notificationDto.getBookingReference() : "N/A");
           model.put("ticketNumber", notificationDto.getTicketNumber() != null ? notificationDto.getTicketNumber() : "N/A");
@@ -75,6 +78,10 @@ public class FlightNotificationService {
           model.put("bookingStatus1", notificationDto.getBookingStatus1() != null ? notificationDto.getBookingStatus1() : "N/A");
           model.put("nvaDate", notificationDto.getNvaDate() != null ? notificationDto.getNvaDate() : "N/A");
 
+          model.put("arrivalTime", notificationDto.getArrivalTime() != null ? notificationDto.getArrivalTime() : "N/A");
+          model.put("departureDate", notificationDto.getDepartureDate() != null ? notificationDto.getDepartureDate() : "N/A");
+          model.put("arrivalDate", notificationDto.getArrivalDate() != null ? notificationDto.getArrivalDate() : "N/A");
+
 
         // Generate the PDF using the populated model
         StringWriter writer = new StringWriter();
@@ -93,19 +100,19 @@ public class FlightNotificationService {
     }
 
 
-// Private method to send an email with the PDF attachment
-private void sendEmailWithAttachment(String toEmail, String subject, String body, byte[] pdfBytes, String attachmentName) throws MessagingException {
-    MimeMessage message = mailSender.createMimeMessage();
-    MimeMessageHelper helper = new MimeMessageHelper(message, true);
-    helper.setTo(toEmail);
-    helper.setSubject(subject);
-    helper.setText(body);
+    // Private method to send an email with the PDF attachment
+    private void sendEmailWithAttachment(String toEmail, String subject, String body, byte[] pdfBytes, String attachmentName) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        helper.setTo(toEmail);
+        helper.setSubject(subject);
+        helper.setText(body);
 
-    Resource pdfResource = new ByteArrayResource(pdfBytes);
-    helper.addAttachment(attachmentName, pdfResource);
+        Resource pdfResource = new ByteArrayResource(pdfBytes);
+        helper.addAttachment(attachmentName, pdfResource);
 
-    mailSender.send(message);
-}
+        mailSender.send(message);
+    }
 }
 
 

@@ -3,6 +3,7 @@ package com.example.flight.dto;
 import lombok.Data;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -29,21 +30,41 @@ public class FlightNotificationDto {
     private String departureCity;
     private String arrivalCity;
 
-    private String departureAirport;   // New field
-    private String arrivalAirport;     // New field
-    private String terminal;           // New field
+    private String departureAirport;
+    private String arrivalAirport;
+    private String terminal;
 
     private String flightClass;
     private String baggage;
     private String fareBasis;
 
-    private LocalDate nvbDate;          // New field
-    private String flightDuration;     // New field
+    private LocalDateTime nvbDate;
+    private String flightDuration;
 
     private String operatedBy;
     private String marketedBy;
 
-    private String bookingStatus1;     // New field
-    private String nvaDate;            // New field
+    private String bookingStatus1;
+    private LocalDateTime nvaDate;
+
+    // Missing Fields
+    private String flightNumber;
+    private LocalDateTime departureTime;
+    private LocalDateTime arrivalTime;
+    private LocalDateTime departureDate;
+    private LocalDateTime arrivalDate;
+
+    // Payment details
+    private String fareCalculation;
+    private String paymentForm;
+    private String endorsements;
+    private BigDecimal baseFare;
+    private BigDecimal taxes;
+    private BigDecimal carrierFees;
+    private BigDecimal totalAmount;
+    private BigDecimal fee;
+    private BigDecimal totalOBFees;
+    private BigDecimal grandTotal;
+
 }
 
