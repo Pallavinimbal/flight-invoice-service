@@ -2,10 +2,12 @@ package com.example.flight.service;
 
 import com.example.flight.dto.FlightNotificationDto;
 import com.lowagie.text.DocumentException;
+import java.time.format.DateTimeFormatter;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -15,6 +17,10 @@ import org.springframework.stereotype.Service;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.springframework.core.io.ClassPathResource;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -35,85 +41,146 @@ public class FlightNotificationService {
     // Create a logger instance
     private static final Logger log = LoggerFactory.getLogger(FlightNotificationService.class);
 
+    private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
+    private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+
     // Generates the flight notification PDF
     public byte[] createFlightNotificationPdf(FlightNotificationDto notificationDto) throws IOException, TemplateException {
         return generatePdf(notificationDto);
     }
 
-    public void sendFlightNotificationEmail(FlightNotificationDto notificationDto, String toEmail) throws IOException, TemplateException, MessagingException {
-        log.info("Sending flight notification email with DTO: {}", notificationDto);
-        byte[] pdfBytes = createFlightNotificationPdf(notificationDto);
 
-        // email with the PDF attachment
-        sendEmailWithAttachment(toEmail, "Your Flight Ticket", "Please find your flight ticket attached.", pdfBytes, "FlightTicket.pdf");
+    public void sendFlightNotificationEmail(FlightNotificationDto notificationDto, String toEmail)
+            throws IOException, TemplateException, MessagingException {
+
+        // Log the details of the Notification DTO
+        log.info("Notification DTO Data - PassengerName: {}, BookingReference: {}",
+                notificationDto.getPassengerName(), notificationDto.getBookingReference());
+
+        byte[] pdfBytes = createFlightNotificationPdf(notificationDto);
+     //Call the new email sending method with the detailed notification DTO
+        sendEmailWithAttachment(toEmail, "Web Booking eTicket", notificationDto, pdfBytes, "FlightTicket.pdf");
     }
 
+
     private byte[] generatePdf(FlightNotificationDto notificationDto) throws IOException, TemplateException {
-        // Log the NVB Date
-        log.info("NVB Date: {}", notificationDto.getNvbDate());
+
 
         // Load the PDF template
         Template pdfTemplate = freemarkerConfig.getTemplate("pdf-template.ftl");
 
-
+        // Prepare model data with proper formatting
         Map<String, Object> model = new HashMap<>();
-          model.put("passengerName", notificationDto.getPassengerName() != null ? notificationDto.getPassengerName() : "N/A");
-          model.put("bookingReference", notificationDto.getBookingReference() != null ? notificationDto.getBookingReference() : "N/A");
-          model.put("ticketNumber", notificationDto.getTicketNumber() != null ? notificationDto.getTicketNumber() : "N/A");
-          model.put("issuingOffice", notificationDto.getIssuingOffice() != null ? notificationDto.getIssuingOffice() : "N/A");
-          model.put("issueDate", notificationDto.getIssueDate() != null ? notificationDto.getIssueDate() : LocalDateTime.now());
-          model.put("flightDate", notificationDto.getFlightDate() != null ? notificationDto.getFlightDate() : "N/A");
-          model.put("departureCity", notificationDto.getDepartureCity() != null ? notificationDto.getDepartureCity() : "N/A");
-          model.put("arrivalCity", notificationDto.getArrivalCity() != null ? notificationDto.getArrivalCity() : "N/A");
-          model.put("flightClass", notificationDto.getFlightClass() != null ? notificationDto.getFlightClass() : "N/A");
-          model.put("baggage", notificationDto.getBaggage() != null ? notificationDto.getBaggage() : "N/A");
-          model.put("fareBasis", notificationDto.getFareBasis() != null ? notificationDto.getFareBasis() : "N/A");
-          model.put("operatedBy", notificationDto.getOperatedBy() != null ? notificationDto.getOperatedBy() : "N/A");
-          model.put("marketedBy", notificationDto.getMarketedBy() != null ? notificationDto.getMarketedBy() : "N/A");
-          model.put("departureAirport", notificationDto.getDepartureAirport() != null ? notificationDto.getDepartureAirport() : "N/A");
-          model.put("arrivalAirport", notificationDto.getArrivalAirport() != null ? notificationDto.getArrivalAirport() : "N/A");
-          model.put("terminal", notificationDto.getTerminal() != null ? notificationDto.getTerminal() : "N/A");
-          model.put("nvbDate", notificationDto.getNvbDate() != null ? notificationDto.getNvbDate() : "N/A");
-          model.put("flightDuration", notificationDto.getFlightDuration() != null ? notificationDto.getFlightDuration() : "N/A");
-          model.put("bookingStatus1", notificationDto.getBookingStatus1() != null ? notificationDto.getBookingStatus1() : "N/A");
-          model.put("nvaDate", notificationDto.getNvaDate() != null ? notificationDto.getNvaDate() : "N/A");
+        model.put("passengerName", notificationDto.getPassengerName() != null ? notificationDto.getPassengerName() : "");
+        model.put("bookingReference", notificationDto.getBookingReference() != null ? notificationDto.getBookingReference() : "");
+        model.put("ticketNumber", notificationDto.getTicketNumber() != null ? notificationDto.getTicketNumber() : "");
+        model.put("issuingOffice", notificationDto.getIssuingOffice() != null ? notificationDto.getIssuingOffice() : "");
+        model.put("issueDate", notificationDto.getIssueDate() != null ? notificationDto.getIssueDate() : LocalDateTime.now().format(dateFormatter));
 
-          model.put("arrivalTime", notificationDto.getArrivalTime() != null ? notificationDto.getArrivalTime() : "N/A");
-          model.put("departureDate", notificationDto.getDepartureDate() != null ? notificationDto.getDepartureDate() : "N/A");
-          model.put("arrivalDate", notificationDto.getArrivalDate() != null ? notificationDto.getArrivalDate() : "N/A");
+        // Load logo and prohibited image absolute paths
+        model.put("logoPath", "file:///C:/POC/Fastays%20logo.jpg"); // %20 replaces spaces in URL
+        model.put("prohibitedPath", "file:///C:/POC/Prohibitedlogo.jpg");
 
 
-        // Generate the PDF using the populated model
+
+        model.put("flightDate", notificationDto.getFlightDate() != null ? notificationDto.getFlightDate() : "");
+        model.put("departureCity", notificationDto.getDepartureCity() != null ? notificationDto.getDepartureCity() : "");
+        model.put("arrivalCity", notificationDto.getArrivalCity() != null ? notificationDto.getArrivalCity() : "");
+
+        // Format NVB and NVA dates
+        model.put("nvbDate", notificationDto.getNvbDate() != null ? notificationDto.getNvbDate().format(dateFormatter) : "");
+        model.put("nvaDate", notificationDto.getNvaDate() != null ? notificationDto.getNvaDate().format(dateFormatter) : "");
+
+        // Terminal for both From and To
+        model.put("fromTerminal", notificationDto.getTerminal() != null ? notificationDto.getTerminal() : "");
+        model.put("toTerminal", notificationDto.getTerminal() != null ? notificationDto.getTerminal() : "");
+
+
+        model.put("flightClass", notificationDto.getFlightClass() != null ? notificationDto.getFlightClass() : "");
+        model.put("baggage", notificationDto.getBaggage() != null ? notificationDto.getBaggage() : "");
+        model.put("fareBasis", notificationDto.getFareBasis() != null ? notificationDto.getFareBasis() : "");
+        model.put("operatedBy", notificationDto.getOperatedBy() != null ? notificationDto.getOperatedBy() : "");
+        model.put("marketedBy", notificationDto.getMarketedBy() != null ? notificationDto.getMarketedBy() : "");
+        model.put("departureAirport", notificationDto.getDepartureAirport() != null ? notificationDto.getDepartureAirport() : "");
+        model.put("arrivalAirport", notificationDto.getArrivalAirport() != null ? notificationDto.getArrivalAirport() : "");
+        model.put("terminal", notificationDto.getTerminal() != null ? notificationDto.getTerminal() : "");
+
+        model.put("flightDuration", notificationDto.getFlightDuration() != null ? notificationDto.getFlightDuration() : "");
+        model.put("bookingStatus1", notificationDto.getBookingStatus1() != null ? notificationDto.getBookingStatus1() : "");
+
+
+        model.put("arrivalTime", notificationDto.getArrivalTime() != null ? notificationDto.getArrivalTime() : "");
+        model.put("departureDate", notificationDto.getDepartureDate() != null ? notificationDto.getDepartureDate() : "");
+        model.put("arrivalDate", notificationDto.getArrivalDate() != null ? notificationDto.getArrivalDate() : "");
+
+        // Render the HTML content to a PDF byte array
         StringWriter writer = new StringWriter();
         pdfTemplate.process(model, writer);
-        String htmlContent = writer.toString();
+
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             ITextRenderer renderer = new ITextRenderer();
-            renderer.setDocumentFromString(htmlContent);
+            renderer.setDocumentFromString(writer.toString());
             renderer.layout();
             renderer.createPDF(baos);
             return baos.toByteArray();
-        } catch (DocumentException de) {
-            throw new IOException("Error generating PDF document: " + de.getMessage(), de);
+        } catch (DocumentException e) {
+            throw new IOException("Error generating PDF document: " + e.getMessage(), e);
         }
     }
 
 
-    // Private method to send an email with the PDF attachment
-    private void sendEmailWithAttachment(String toEmail, String subject, String body, byte[] pdfBytes, String attachmentName) throws MessagingException {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        helper.setTo(toEmail);
-        helper.setSubject(subject);
-        helper.setText(body);
 
-        Resource pdfResource = new ByteArrayResource(pdfBytes);
-        helper.addAttachment(attachmentName, pdfResource);
-
-        mailSender.send(message);
+    private String loadImagePath(String resourcePath) throws IOException {
+        Path path = Paths.get(new ClassPathResource(resourcePath).getURI());
+        return path.toUri().toString();
     }
-}
+
+        // Updated method to send an email with the PDF attachment
+        private void sendEmailWithAttachment (String toEmail, String subject, FlightNotificationDto notificationDto,
+        byte[] pdfBytes, String attachmentName) throws MessagingException, IOException, TemplateException {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            // Setting recipient and subject
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+
+            // Load email template
+            Template emailTemplate = freemarkerConfig.getTemplate("email-template.ftl");
+
+            // Prepare the data model for Freemarker template
+            Map<String, Object> model = new HashMap<>();
+            model.put("passengerName", notificationDto.getPassengerName());
+            model.put("bookingReference", notificationDto.getBookingReference());
+            model.put("passengerEmail", toEmail);
+
+            // Format the current date and time in the desired format
+            LocalDateTime now = LocalDateTime.now();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM, yyyy, h:mm a");
+
+            // Render template to a string
+            StringWriter writer = new StringWriter();
+            emailTemplate.process(model, writer);
+            String emailContent = writer.toString();
+
+            // Set the HTML content in the email body
+            helper.setText(emailContent, true);
+
+            // Attach PDF
+            Resource pdfResource = new ByteArrayResource(pdfBytes);
+            helper.addAttachment(attachmentName, pdfResource);
+
+            // Send the email
+            mailSender.send(message);
+        }
+    }
+
+
+
+
+
+
 
 
 
