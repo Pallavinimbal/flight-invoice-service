@@ -2,7 +2,6 @@ package com.example.flight.dto;
 
 import lombok.Data;
 import jakarta.validation.constraints.NotNull;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -46,7 +45,7 @@ public class FlightNotificationDto {
     private String bookingStatus1;
     private LocalDateTime nvaDate;
 
-    // Missing Fields
+    // Fields
     private String flightNumber;
     private LocalDateTime departureTime;
     private LocalDateTime arrivalTime;
@@ -59,11 +58,10 @@ public class FlightNotificationDto {
     private String endorsements;
     private BigDecimal baseFare;
     private BigDecimal taxes;
-    private BigDecimal carrierFees;
+    private BigDecimal carrierImposedFees;
     private BigDecimal totalAmount;
     private BigDecimal fee;
     private BigDecimal totalOBFees;
     private BigDecimal grandTotal;
-
 }
 

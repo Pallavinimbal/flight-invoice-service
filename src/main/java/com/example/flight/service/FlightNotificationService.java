@@ -2,6 +2,9 @@ package com.example.flight.service;
 
 import com.example.flight.dto.FlightNotificationDto;
 import com.lowagie.text.DocumentException;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -18,14 +21,9 @@ import org.xhtmlrenderer.pdf.ITextRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.core.io.ClassPathResource;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -43,6 +41,15 @@ public class FlightNotificationService {
 
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy");
     private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter fullDateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm ddMMMyyyy");
+
+    private String formatFlightTime(LocalDateTime date, LocalDateTime time) {
+        if (date != null && time != null) {
+            LocalDateTime combinedDateTime = LocalDateTime.of(date.toLocalDate(), time.toLocalTime());
+            return combinedDateTime.format(fullDateTimeFormatter); // Using the fullDateTimeFormatter defined above
+        }
+        return ""; // Return empty string if either date or time is null
+    }
 
     // Generates the flight notification PDF
     public byte[] createFlightNotificationPdf(FlightNotificationDto notificationDto) throws IOException, TemplateException {
@@ -57,31 +64,52 @@ public class FlightNotificationService {
         log.info("Notification DTO Data - PassengerName: {}, BookingReference: {}",
                 notificationDto.getPassengerName(), notificationDto.getBookingReference());
 
+        log.info("Fare Calculation: {}", notificationDto.getFareCalculation());
+        log.info("Payment Form: {}", notificationDto.getPaymentForm());
+        log.info("Endorsements: {}", notificationDto.getEndorsements());
+
+        //FARE DETAILS
+        log.info("Base Fare: {}", notificationDto.getBaseFare());
+        log.info("Taxes: {}", notificationDto.getTaxes());
+        log.info("Carrier Imposed Fees from DTO: {}", notificationDto.getCarrierImposedFees());
+        log.info("Total Amount: {}", notificationDto.getTotalAmount());
+        log.info("Fee: {}", notificationDto.getFee());
+        log.info("Total OB Fees: {}", notificationDto.getTotalOBFees());
+        log.info("Grand Total: {}", notificationDto.getGrandTotal());
+
+
         byte[] pdfBytes = createFlightNotificationPdf(notificationDto);
-     //Call the new email sending method with the detailed notification DTO
+        //Call the new email sending method with the detailed notification DTO
         sendEmailWithAttachment(toEmail, "Web Booking eTicket", notificationDto, pdfBytes, "FlightTicket.pdf");
     }
 
 
+
     private byte[] generatePdf(FlightNotificationDto notificationDto) throws IOException, TemplateException {
-
-
         // Load the PDF template
         Template pdfTemplate = freemarkerConfig.getTemplate("pdf-template.ftl");
 
-        // Prepare model data with proper formatting
+        //Prepare model data with proper formatting
         Map<String, Object> model = new HashMap<>();
         model.put("passengerName", notificationDto.getPassengerName() != null ? notificationDto.getPassengerName() : "");
         model.put("bookingReference", notificationDto.getBookingReference() != null ? notificationDto.getBookingReference() : "");
         model.put("ticketNumber", notificationDto.getTicketNumber() != null ? notificationDto.getTicketNumber() : "");
         model.put("issuingOffice", notificationDto.getIssuingOffice() != null ? notificationDto.getIssuingOffice() : "");
-        model.put("issueDate", notificationDto.getIssueDate() != null ? notificationDto.getIssueDate() : LocalDateTime.now().format(dateFormatter));
+
+        // Set ISSUE DATE to the actual current date and time
+        LocalDateTime currentDateTime = LocalDateTime.now();
+        String formattedIssueDate = currentDateTime.format(fullDateTimeFormatter); // Uses "HH:mm ddMMMyyyy" format
+        model.put("issueDate", formattedIssueDate);
+
+        // Format arrival and departure times using the new formatter
+        model.put("departureTime", formatFlightTime(notificationDto.getDepartureDate(), notificationDto.getDepartureTime()));
+        model.put("arrivalTime", formatFlightTime(notificationDto.getArrivalDate(), notificationDto.getArrivalTime()));
+
+
 
         // Load logo and prohibited image absolute paths
         model.put("logoPath", "file:///C:/POC/Fastays%20logo.jpg"); // %20 replaces spaces in URL
         model.put("prohibitedPath", "file:///C:/POC/Prohibitedlogo.jpg");
-
-
 
         model.put("flightDate", notificationDto.getFlightDate() != null ? notificationDto.getFlightDate() : "");
         model.put("departureCity", notificationDto.getDepartureCity() != null ? notificationDto.getDepartureCity() : "");
@@ -95,7 +123,6 @@ public class FlightNotificationService {
         model.put("fromTerminal", notificationDto.getTerminal() != null ? notificationDto.getTerminal() : "");
         model.put("toTerminal", notificationDto.getTerminal() != null ? notificationDto.getTerminal() : "");
 
-
         model.put("flightClass", notificationDto.getFlightClass() != null ? notificationDto.getFlightClass() : "");
         model.put("baggage", notificationDto.getBaggage() != null ? notificationDto.getBaggage() : "");
         model.put("fareBasis", notificationDto.getFareBasis() != null ? notificationDto.getFareBasis() : "");
@@ -108,15 +135,26 @@ public class FlightNotificationService {
         model.put("flightDuration", notificationDto.getFlightDuration() != null ? notificationDto.getFlightDuration() : "");
         model.put("bookingStatus1", notificationDto.getBookingStatus1() != null ? notificationDto.getBookingStatus1() : "");
 
-
-        model.put("arrivalTime", notificationDto.getArrivalTime() != null ? notificationDto.getArrivalTime() : "");
         model.put("departureDate", notificationDto.getDepartureDate() != null ? notificationDto.getDepartureDate() : "");
-        model.put("arrivalDate", notificationDto.getArrivalDate() != null ? notificationDto.getArrivalDate() : "");
+        model.put("flightNumber", notificationDto.getFlightNumber() != null ? notificationDto.getFlightNumber() : "");
+
+        model.put("fareCalculation", notificationDto.getFareCalculation() != null ? notificationDto.getFareCalculation() : "");
+        model.put("paymentForm", notificationDto.getPaymentForm() != null ? notificationDto.getPaymentForm() : "");
+        model.put("endorsements", notificationDto.getEndorsements() != null ? notificationDto.getEndorsements() : "");
+
+
+        //FARE DETAILS
+        model.put("baseFare", notificationDto.getBaseFare() != null ? notificationDto.getBaseFare() : BigDecimal.ZERO);
+        model.put("taxes", notificationDto.getTaxes() != null ? notificationDto.getTaxes() : BigDecimal.ZERO);
+        model.put("carrierImposedFees", notificationDto.getCarrierImposedFees() != null ? notificationDto.getCarrierImposedFees() : BigDecimal.ZERO);
+        model.put("totalAmount", notificationDto.getTotalAmount() != null ? notificationDto.getTotalAmount() : BigDecimal.ZERO);
+        model.put("fee", notificationDto.getFee() != null ? notificationDto.getFee() : BigDecimal.ZERO);
+        model.put("totalOBFees", notificationDto.getTotalOBFees() != null ? notificationDto.getTotalOBFees() : BigDecimal.ZERO);
+        model.put("grandTotal", notificationDto.getGrandTotal() != null ? notificationDto.getGrandTotal() : BigDecimal.ZERO);
 
         // Render the HTML content to a PDF byte array
         StringWriter writer = new StringWriter();
         pdfTemplate.process(model, writer);
-
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             ITextRenderer renderer = new ITextRenderer();
@@ -130,13 +168,15 @@ public class FlightNotificationService {
     }
 
 
-
-    private String loadImagePath(String resourcePath) throws IOException {
-        Path path = Paths.get(new ClassPathResource(resourcePath).getURI());
-        return path.toUri().toString();
+    private String formatFlightDateTime(LocalDateTime dateTime) {
+        if (dateTime != null) {
+            return dateTime.format(fullDateTimeFormatter);
+        }
+        return ""; // Return empty string if null
     }
 
-        // Updated method to send an email with the PDF attachment
+
+    // Updated method to send an email with the PDF attachment
         private void sendEmailWithAttachment (String toEmail, String subject, FlightNotificationDto notificationDto,
         byte[] pdfBytes, String attachmentName) throws MessagingException, IOException, TemplateException {
             MimeMessage message = mailSender.createMimeMessage();
@@ -157,7 +197,10 @@ public class FlightNotificationService {
 
             // Format the current date and time in the desired format
             LocalDateTime now = LocalDateTime.now();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE, dd MMM, yyyy, h:mm a");
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("EEE, dd MMM, yyyy, h:mm a");
+            String formattedDate = now.format(dateFormatter);
+
+            model.put("formattedDate", formattedDate); // formatted date to the model
 
             // Render template to a string
             StringWriter writer = new StringWriter();

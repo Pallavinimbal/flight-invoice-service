@@ -90,7 +90,6 @@ public class FlightNotification {
     @Column(nullable = true)
     private String nvaDate;
 
-    // Missing Fields
     @Column(nullable = true)
     private String flightNumber;
 
@@ -112,7 +111,7 @@ public class FlightNotification {
     private String endorsements;
     private BigDecimal baseFare;
     private BigDecimal taxes;
-    private BigDecimal carrierFees;
+    private BigDecimal carrierImposedFees;
     private BigDecimal totalAmount;
     private BigDecimal fee;
     private BigDecimal totalOBFees;
